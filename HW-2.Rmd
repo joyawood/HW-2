@@ -1,11 +1,13 @@
 ---
 title: "MATH 216 Homework 2"
-author: "WRITE YOUR NAME HERE"
+author: "Joy Wood"
+header-includes:
+   - \usepackage{bbm}
 output: html_document
 ---
-
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(knitr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(foreign))
 ```
@@ -15,26 +17,14 @@ suppressPackageStartupMessages(library(foreign))
 
 Please indicate
 
-* Who you collaborated with:
-* Roughly how much time you spent on this HW:
-* What gave you the most trouble:
-* Any comments you have: 
-
-
-
-
-
-
+* Who you collaborated with: Kyler
+* Roughly how much time you spent on this HW: 7hrs
+* What gave you the most trouble: I don't feel very comfortable interpriting residual plots. Not sure how to fit the best model to data. Spent a lot of time trying to get the actual rmd to look good knitted, still feel like it doesn't. I didn't know how to plot a model with many different predictor variables for 1 d. 
+* Any comments you have: I didn't love working with the polution data because I don't really understand it. Usually when I run regressions, I'm running them on data for which I have some reference point. Maybe I know if it seems like different variables would logically be coorelated, or can quess the sign of their coefficient. Here I couldn't really do that, so trying to predict outcomes felt a bit weird.
 
 ## Question 1:
 
-Question 4 on page 76 from Chapter 4 of Data Analysis Using Regression and
-Multilevel/Hierarchical Models.  The codebook can be found
-[here](http://www.stat.columbia.edu/~gelman/arm/examples/pollution/pollution.txt).
-I've included R code blocks for each question, but use them only if you feel it
-necessary.
-
-```{r, echo=FALSE, cache=TRUE}
+```{r, echo=FALSE, cache=TRUE, message = FALSE, warnings = FALSE}
 # DO NOT EDIT THIS SECTION!
 url <- "http://www.stat.columbia.edu/~gelman/arm/examples/pollution/pollution.dta"
 pollution <- read.dta(url) %>% 
@@ -43,79 +33,99 @@ pollution <- read.dta(url) %>%
 
 ### a)
 
-```{r, echo=FALSE, fig.width=12, fig.height=6}
+```{r, echo=FALSE, fig.width=12, fig.height=6, message = FALSE, warnings = FALSE}
+
+ggplot(pollution, aes(x=nox, y=mort)) +
+  geom_point(shape=1) + geom_smooth(method=lm)+
+  labs(x= "Relative nitric oxides pollution potential", y= "Total age-adjusted mortality rate per 100,000")+
+  ggtitle("Mortality Rate vs. Nitric Oxide Level")+
+  theme_minimal()
+
+```
+<br>
+<br>
+\[ Mort = \beta _{0} + nox\beta _{1} +  \varepsilon  \]
+
+```{r, echo=FALSE, fig.width=12, fig.height=6, message = FALSE, warnings = FALSE}
+
+m1 <- lm(mort~nox, pollution)  #Create a linear model
+
+kable(summary(m1)$coef, digits=2)
+```
+<br>
+<br>
+
+A simple linear regression does not seem to be very effective in describing the fit of these data. Though there are several outliers, the data is heavily concentrated between 0 and 50, and rather is sparse otherwise. There appears to be significant variation in mortality rates for low rates of relative nitric oxides pollution potenial. Visually, the regression line accounts for almost none of the variation in the data, which is supported by the low R-squared, which at 0.005987 suggests that this model explains only 0.05% of the variation in mortality rates.
+
+<br>
+<br>
+```{r, echo=FALSE, cache=TRUE, message = FALSE, warnings = FALSE}
+resid_m1 = resid(m1)
+ggplot(pollution, aes(x=nox, y=resid_m1)) +
+  geom_point(shape=1)+
+  labs(x= "Relative nitric oxides pollution potential", y= "Residuals")+
+  ggtitle("Residual Plot")+
+  theme_minimal()
+
+qqnorm(resid_m1, main ="Normal Probablity Plot")
+qqline(resid_m1)
 
 ```
 
+According to the residual plot and the Q-Q Plot, the residuals seem to be fairly normally distributed, although there seems to be some abnormality to the tails.
 
 ### b)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+ggplot(pollution, aes(x=log(nox), y=mort)) +
+  geom_point(shape=1) + geom_smooth(method=lm)+
+  labs(x= "Log of relative nitric oxides pollution potential", y= "Total age-adjusted mortality rate per 100,000")+
+  ggtitle("Mortality Rate vs. Log Nitric Oxide Level")+
+  theme_minimal()
+
+m2 <- lm(mort~log(nox), pollution)  #Create a linear model
+
+resid_m2 = resid(m2)
+ggplot(pollution, aes(x=nox, y=resid_m2)) +
+  geom_point(shape=1)+
+  labs(x= "Log relative nitric oxides pollution potential", y= "Residuals")+
+  ggtitle("Residual Plot of Lin-Log Model")
 
 ```
 
+
+Logging the independant variable leads to a model with a much higher R squared, accounting for 8% of variation in the data. The residuals still look normal.
 
 ### c)
 
-```{r, echo=FALSE, fig.width=12, fig.height=6}
+\[ Mort = \beta _{0} + log(nox)\beta _{1} +  \varepsilon  \]
 
+```{r, echo=FALSE, fig.width=12, fig.height=6}
+kable(summary(m2)$coef, digits=2)
+#a 1% increase in nox is associatiated with an increase of 15.335 in mortality rate per 100,000
 ```
 
+This model associates a 1% increase in relative nitric oxides pollution potential with an increase of 15.335 deaths per 100,000.
 
 ### d)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+m3 <- lm(mort~log(nox) + log(hc) + log(so2), pollution)  #Create a linear model
+
+resid_m3 = resid(m3)
+ggplot(pollution, aes(x=nox, y=resid_m3)) +
+  geom_point(shape=1)+
+  labs(x= "Log relative nitric oxides pollution potential", y= "Residuals")+
+  ggtitle("Residual Plot of Multiple Predictor Model")+
+  theme_minimal()
 
 ```
 
 
-### e)
+\[ Mort = \beta _{0} + log(nox)\beta _{1} +log(hc)\beta _{2}+log(so2)\beta _{3} +  \varepsilon\]
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
-
+kable(summary(m3)$coef, digits=2)
 ```
 
-
-### f) What do you think are the reasons for using cross-validation?
-
-
-
-```{r, echo=FALSE, fig.width=12, fig.height=6}
-
-```
-
-
-
-
-
-
-
-## Question 2:
-
-Perform an Exploratory Data Analysis (EDA) of the OkCupid data, keeping in mind 
-in HW-3, you will be fitting a logistic regression to predict gender. What do I mean by
-EDA?
-
-* Visualizations
-* Tables
-* Numerical summaries
-
-For the R Markdown to work, you must first copy the file `profiles.csv` from
-Lec09 to the project directory `HW-2`.
-
-```{r, echo=FALSE, cache=TRUE}
-# DO NOT EDIT THIS SECTION!
-profiles <- read.csv("profiles.csv", header=TRUE) %>% tbl_df()
-```
-
-
-```{r, echo=FALSE, fig.width=12, fig.height=6}
-# Feel free to make multiple code blocks, but set echo, fig.width, fig.height as 
-# above
-```
-
-
-```{r, echo=FALSE, fig.width=12, fig.height=6}
-# Feel free to make multiple code blocks, but set echo, fig.width, fig.height as 
-# above
-```
+This model proves to be much more effective at describing the data than the previous models. It accounts for 31% of the variation, which is interesting because the coefficients are actually quite low.
